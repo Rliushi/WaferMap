@@ -1,0 +1,265 @@
+<html>
+<head>
+<meta charset="utf-8">
+<style>  
+  
+.tooltip{  
+    position: absolute;  
+    width: 120px;  
+    height: auto;  
+    font-family: simsun;  
+    font-size: 14px;  
+    text-align: center;  
+    color: white;  
+    border-width: 2px solid black;  
+    background-color: black;  
+    border-radius: 5px;  
+}  
+  
+.tooltip:after{   
+    content: '';  
+    position: absolute;  
+    bottom: 100%;  
+    left: 20%;  
+    margin-left: -8px;  
+    width: 0;  
+    height: 0;  
+    border-bottom: 12px solid black;  
+    border-right: 12px solid transparent;  
+    border-left: 12px solid transparent;  
+}  
+  
+</style>  
+<script type="text/javascript" src="d3.js"></script>
+<title>D3 Map</title>
+</head>
+<body>
+<div class="c" style="float:left;">
+<div class="wafer" style="float:left; height:800px;width:800px">
+   <script type="text/javascript">
+    // DiePitch 5.7400350000e+003  9.5220780000e+003
+    // Y : 3.950000000e+03 6.3970000000e+03
+    //var diewidth = 0.03;
+    //var dieheight= 0.03;
+    //var waferwidth = 40;
+	//document.write("aaaa");
+	//https://d3js.org/d3.v3.js
+d3.json("http://192.168.82.89:8080/jerseyDemo/klarf/GetConfig",function(error,cf)
+	    		{
+	    			cf.forEach(function(d) {
+	    				diewidth = parseFloat(d.DieXPitch);
+	    				dieheight = parseFloat(d.DieYPitch); 
+	    				waferwidth = parseFloat(d.waferwidth);
+	    				//document.write(diewidth);
+	    			})
+	    			var width = 800;
+	    			var height = 800;
+	    			var svgwafer = d3.select('div.wafer').append("svg").attr("width", width).attr("height", height);
+	    			var svgimage = d3.select('div.image').append("svg").attr("width", 500).attr("height", 500);
+	    			var svglargeimage = d3.select('div.largeimage').append("svg").attr("width", 500).attr("height", 500);
+	    			var XYScale = d3.scale.linear()
+	    		    					 .domain([0, waferwidth])
+	    		    					 .range([0,800]);
+	    			//定义缩放函数
+	    			var zoom = d3.behavior.zoom()
+	    		     			.scaleExtent([1,20])//用于设置最小和最大的缩放比例  
+	    		     			.on("zoom",zoomed)
+	    		    //用于分组，缩放时整体缩放
+	    			var cir = svgwafer.append("g").call(zoom);
+	    			var die = svgwafer.append("g").call(zoom);
+	    			var defect = svgwafer.append("g").call(zoom);
+		    		var images = svgimage.append("g");
+		    		var largeimage = svglargeimage.append("g");
+		    		
+		    		var tooltip = d3.select("body")
+					.append("div")
+					.attr("class","tooltip")
+					.style("opacity",1.0);
+		    		
+	    			cir.append('circle').attr({
+	    				cx: XYScale(waferwidth/2),
+	    				cy: XYScale(waferwidth/2),
+	    				r : XYScale(waferwidth/2)
+	    			}).style({
+	    				fill:d3.rgb(240,240,240),
+	    				stroke:'black',
+	    				'strkoe-width':2
+	    			})
+	    			
+	    			function zoomed(){  
+	    		       cir.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")");
+	    		       die.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")");
+	    		       defect.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")");
+	    		     //  images.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")");
+	    		    }//d3.event.translate 是平移的坐标值，d3.event.scale 是缩放的值。
+	    		    
+	    			var pointInsideCircle = function(x,y,cx,cy,r) 
+	    			{
+	    		    	if (r===0) return false;
+	    		    	var dx = parseFloat(cx) - parseFloat(x);
+	    		    	var dy = parseFloat(cy) - parseFloat(y);
+	    		    	return dx * dx + dy * dy <= parseFloat(r) * parseFloat(r);
+	    			}
+	    			
+	    		    function isCircleCenter(x,y,width,height)
+	    		    {
+	    		    	if(XYScale(waferwidth/2) >= x && XYScale(waferwidth/2) <= (x + XYScale(width)) && XYScale(waferwidth/2) >= y && XYScale(waferwidth/2) <= (y + XYScale(height)))
+	    		    		{
+	    		    			return true;
+	    		    		}
+	    		    	else 
+	    		    		{
+	    		    			return false;	    		    		
+	    		    		} 
+	    		    }
+	    		    
+	    			for (i = 0;i <= XYScale(waferwidth);i = i+XYScale(diewidth))
+	    				{
+	    					for(j = 0;j <= XYScale(waferwidth);j = j+XYScale(dieheight))
+	    						{
+	    							if (pointInsideCircle(i,j,XYScale(waferwidth/2),XYScale(waferwidth/2),XYScale(waferwidth/2))&&pointInsideCircle(i+XYScale(diewidth),j,XYScale(waferwidth/2),XYScale(waferwidth/2),XYScale(waferwidth/2))&&pointInsideCircle(i,j+XYScale(dieheight),XYScale(waferwidth/2),XYScale(waferwidth/2),XYScale(waferwidth/2))&&pointInsideCircle(i+XYScale(diewidth),j+XYScale(dieheight),XYScale(waferwidth/2),XYScale(waferwidth/2),XYScale(waferwidth/2)))
+	    							{
+	    								if (isCircleCenter(i,j,diewidth,dieheight))
+	    								{
+		    								
+		    								var diecenterx = parseFloat(i); //339
+		    								var diecentery = parseFloat(j) + parseFloat(XYScale(dieheight)); //410.39999
+	    									diecolor = 'orange'
+	    								}
+	    								else
+	    								{
+	    									diecolor = 'white'
+										}
+	    								die.append('rect')
+		    							.attr({
+		    								x: i,
+		    								y: j,
+		    								width : XYScale(diewidth),
+		    								height : XYScale(dieheight),
+		    								id : 1
+		    							}).style({
+		    								fill: diecolor,
+		    								stroke:'black',
+		    				    			'strkoe-width':0.001
+		    							}).on("click",function(){
+		    				    			 var tmpdiecenterx = parseFloat(d3.select(this).attr("x"))+parseFloat(d3.select(this).attr("width")/2);
+		    				    			 var tmpdiecentery = parseFloat(d3.select(this).attr("y"))+parseFloat(d3.select(this).attr("height")/2);
+		    				    			 var diexindex = Math.floor((tmpdiecenterx-diecenterx)/XYScale(diewidth));	    				    				
+		    				   				 //var dieyindex = (tmpdiecentery > diecentery) ? Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight)) : Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight))
+		    				   				 var dieyindex = Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight));
+		    				    		 //    alert(diexindex+"........"+dieyindex)
+		    				   				 d3.json("http://192.168.82.89:8080/jerseyDemo/klarf/GetDefectImage?lotid=CCCC&waferid=01&xindex="+diexindex+"&yindex="+dieyindex,function(error,img)
+		    				   						 {
+		    				   					 		images.selectAll('image').remove();
+		    			    					 		largeimage.selectAll('image').remove();
+		    			    					 		var imagelist = new Array();
+		    			    							img.forEach(function(d) {
+		    			    							imagelist.push(d.imagename);
+		   				    							for(i=0;i<imagelist.length;i++)
+		   				    							 	{
+		   				    							 		images.append('image')
+		    				    							 	.attr({
+		    				    						     	   'xlink:href' : imagelist[i],			    				    							 		
+		    				    							 	    x : 10+i*110,
+			    				    							    y : 10,
+			    				    							 	width : 100,
+			    				    							 	height : 100,
+			    				    								}).on("click",function(){
+			    				    							 		//alert(d3.select(this).attr('xlink:href'))
+			    				    									largeimage.selectAll('image').remove();
+			    				    							 		largeimage.append('image')
+			    				    							 		.attr({
+			    				    					    			   'xlink:href' : d3.select(this).attr('xlink:href'),
+					    				    						 		x : 0,
+					    				    							 	y : 0,
+					    				    								width : 400,
+					    				    							 	height : 400,
+			    				    							 		})
+			    				    							 	});
+		    				    							 }	    				    							 			
+		    				    						   })
+		    				   						 })
+		    				    						  }).on("mouseover",function(d){
+		    				    								
+		    				    								//鼠标移入时，
+		    				    								//（1）通过 selection.html() 来更改提示框的文字
+		    				    								//（2）通过更改样式 left 和 top 来设定提示框的位置
+		    				    								//（3）设定提示框的透明度为1.0（完全不透明）
+		    				    								var tmpdiecenterx = parseFloat(d3.select(this).attr("x"))+parseFloat(d3.select(this).attr("width")/2);
+		    				    							    var tmpdiecentery = parseFloat(d3.select(this).attr("y"))+parseFloat(d3.select(this).attr("height")/2);
+		    				    			 					var diexindex = Math.floor((tmpdiecenterx-diecenterx)/XYScale(diewidth));	    				    				
+		    				   				 //var dieyindex = (tmpdiecentery > diecentery) ? Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight)) : Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight))
+		    				   				 					var dieyindex = Math.floor((diecentery-tmpdiecentery)/XYScale(dieheight));
+		    				    								
+		    				    								tooltip.html( "X : " + diexindex +"<br />" + "Y : "+ dieyindex)
+		    				    									.style("left", (d3.event.pageX) + "px")
+		    				    									.style("top", (d3.event.pageY + 20) + "px")
+		    				    									.style("opacity",1.0);
+		    				    							})
+		    				    							.on("mousemove",function(d){
+		    				    								 //鼠标移动时，更改样式 left 和 top 来改变提示框的位置 
+		    				    								
+		    				    								tooltip.style("left", (d3.event.pageX) + "px")
+		    				    										.style("top", (d3.event.pageY + 20) + "px");
+		    				    							})
+		    				    							.on("mouseout",function(d){
+		    				    								 //鼠标移出时，将透明度设定为0.0（完全透明）
+		    				    								
+		    				    								tooltip.style("opacity",0.0);
+		    				    							});				
+	    							}
+	    							
+	    						}
+	    				}
+	    			//获取 Json 数据，获得后就是可以遍历的数据结构 使用 forEach 方式遍历
+	    			d3.json("http://192.168.82.89:8080/jerseyDemo/klarf/GetJsonData?lotid=CCCC&waferid=01",function(error,data)
+	    					{
+	    					data.forEach(function(d) {
+	    					var xValue = XYScale(parseInt(d.XINDEX)*diewidth + parseFloat(parseFloat(d.XREL)/10000))+diecenterx - XYScale(Math.sqrt(parseFloat(d.DEFECTAREA))/2*diewidth);
+	    					if(d.YINDEX >= 0 )
+	    						{
+	    							var yValue = diecentery - XYScale(parseInt(d.YINDEX)*dieheight) - XYScale(parseFloat(parseFloat(d.YREL)/10000)) - XYScale(Math.sqrt(parseFloat(d.DEFECTAREA))/2*dieheight);
+	    						}
+	    					else
+	    						{
+	    							var yValue = diecentery +  XYScale(-parseInt(d.YINDEX)*dieheight) - XYScale(parseFloat(parseFloat(d.YREL)/10000)) - XYScale(Math.sqrt(parseFloat(d.DEFECTAREA))/2*dieheight);
+	    						}
+	    					if(parseFloat(d.DEFECTAREA) >= 0.1)
+	    						{
+	    						defect.append('rect')
+		    					.attr({
+		    						x: xValue,
+		    						y: yValue,
+		    						width : Math.sqrt(parseFloat(d.DEFECTAREA))*15,
+		    						height : Math.sqrt(parseFloat(d.DEFECTAREA))*15
+		    					}).style({
+		    						fill:'black'
+		    					})
+	    						}
+	    					else
+	    					{
+	    						
+	    						defect.append('rect')
+		    					.attr({
+		    						x: xValue,
+		    						y: yValue,
+		    						width : Math.sqrt(parseFloat(d.DEFECTAREA))*15,
+		    						height : Math.sqrt(parseFloat(d.DEFECTAREA))*15
+		    					}).style({
+		    						fill:'red'
+		    					})
+	    					}
+	    					
+	    					})
+	    					})
+	    					
+	    		})
+		</script>
+</div>
+<div class="image" style="float:left; height:500px;width:500px;font:12">Defect List(点击显示大图)</div>
+<div class="largeimage" style="float:left; height:500px;width:500px;font:12">Large Image</div>
+<div style="clear:both"></div><!--这个层很有用，必须要，否则可能不兼容。-->
+</div>
+ 
+</body>
+</html>
